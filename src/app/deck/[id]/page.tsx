@@ -1,28 +1,31 @@
 'use client';
 
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import CardsEditor from '@/components/CardsEditor';
 import { findMockDeck } from '@/data/mockDecks';
 import { Card, Deck } from '@/types';
 import { loadDecks, saveDeck } from '@/utils/storage';
 
-interface DeckPageProps {
-  params: { id: string };
-}
-
-export default function DeckPage({ params }: DeckPageProps) {
+export default function DeckPage() {
+  const params = useParams<{ id: string }>();
   const [deck, setDeck] = useState<Deck | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const deckId = params?.id;
+    if (!deckId) {
+      return;
+    }
+
     const storedDecks = loadDecks();
-    const match = storedDecks.find((item) => item.id === params.id) ?? findMockDeck(params.id) ?? null;
+    const match = storedDecks.find((item) => item.id === deckId) ?? findMockDeck(deckId) ?? null;
     startTransition(() => {
       setDeck(match);
       setIsLoading(false);
     });
-  }, [params.id]);
+  }, [params]);
 
   const cards = useMemo(() => deck?.cards ?? [], [deck]);
 

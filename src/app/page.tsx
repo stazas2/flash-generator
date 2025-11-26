@@ -152,9 +152,16 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 lg:flex-row">
-        <div className="flex-1 space-y-6">
+    <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/50">
+      {/* Animated background elements */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute left-1/4 top-0 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-indigo-400/20 to-purple-400/20 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-96 w-96 translate-x-1/2 translate-y-1/2 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-400/20 blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-violet-400/10 to-fuchsia-400/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 lg:flex-row lg:py-16">
+        <div className="flex-1 space-y-8">
           <GenerateForm
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
@@ -164,7 +171,7 @@ export default function HomePage() {
           <CardsEditor cards={cards} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onAddCard={handleAddCard} />
           <FeedbackForm />
         </div>
-        <div className="flex w-full flex-col gap-6 lg:w-2/5">
+        <div className="flex w-full flex-col gap-8 lg:w-2/5">
           <DeckList decks={decks} onCreateDeck={handleCreateDeck} onSelectDeck={setSelectedDeck} />
           <ExportImport onImportComplete={handleImport} />
         </div>

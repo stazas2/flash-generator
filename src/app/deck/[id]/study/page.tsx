@@ -1,28 +1,31 @@
 'use client';
 
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { startTransition, useEffect, useState } from 'react';
 import StudyView from '@/components/StudyView';
 import { findMockDeck } from '@/data/mockDecks';
 import { Deck } from '@/types';
 import { loadDecks } from '@/utils/storage';
 
-interface StudyPageProps {
-  params: { id: string };
-}
-
-export default function StudyPage({ params }: StudyPageProps) {
+export default function StudyPage() {
+  const params = useParams<{ id: string }>();
   const [deck, setDeck] = useState<Deck | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const deckId = params?.id;
+    if (!deckId) {
+      return;
+    }
+
     const storedDecks = loadDecks();
-    const match = storedDecks.find((item) => item.id === params.id) ?? findMockDeck(params.id) ?? null;
+    const match = storedDecks.find((item) => item.id === deckId) ?? findMockDeck(deckId) ?? null;
     startTransition(() => {
       setDeck(match);
       setIsLoading(false);
     });
-  }, [params.id]);
+  }, [params]);
 
   if (isLoading) {
     return <div className="p-10 text-center text-slate-500">Загружаем режим учёбы…</div>;
