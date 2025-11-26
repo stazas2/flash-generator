@@ -1,16 +1,44 @@
+'use client';
+
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { startTransition, useEffect, useState } from 'react';
 import StudyView from '@/components/StudyView';
 import { findMockDeck } from '@/data/mockDecks';
+import { Deck } from '@/types';
+import { loadDecks } from '@/utils/storage';
 
 interface StudyPageProps {
   params: { id: string };
 }
 
 export default function StudyPage({ params }: StudyPageProps) {
-  const deck = findMockDeck(params.id);
+  const [deck, setDeck] = useState<Deck | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const storedDecks = loadDecks();
+    const match = storedDecks.find((item) => item.id === params.id) ?? findMockDeck(params.id) ?? null;
+    startTransition(() => {
+      setDeck(match);
+      setIsLoading(false);
+    });
+  }, [params.id]);
+
+  if (isLoading) {
+    return <div className="p-10 text-center text-slate-500">Загружаем режим учёбы…</div>;
+  }
+
   if (!deck) {
-    notFound();
+    return (
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-3xl px-4 py-10 text-center">
+          <p className="text-lg text-slate-600">Колода не найдена. Вернись на главную страницу.</p>
+          <Link href="/" className="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white">
+            ← На главную
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (

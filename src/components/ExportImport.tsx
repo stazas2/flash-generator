@@ -1,9 +1,14 @@
 'use client';
 
 import { ChangeEvent, useRef } from 'react';
+import { Deck } from '@/types';
 import { loadDecks, persistDecks } from '@/utils/storage';
 
-export default function ExportImport() {
+interface ExportImportProps {
+  onImportComplete?: (decks: Deck[]) => void;
+}
+
+export default function ExportImport({ onImportComplete }: ExportImportProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -34,7 +39,8 @@ export default function ExportImport() {
         const imported = JSON.parse(loadEvent.target?.result as string);
         if (Array.isArray(imported)) {
           persistDecks(imported);
-          alert('Импорт завершён! Обнови страницу, чтобы увидеть обновлённый список.');
+          onImportComplete?.(imported as Deck[]);
+          alert('Импорт завершён!');
         } else {
           alert('Файл не похож на бэкап колод.');
         }

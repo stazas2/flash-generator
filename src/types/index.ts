@@ -22,3 +22,8 @@ export interface GenerateRequest {
   text: string;
   count: number;
 }
+
+export interface GenerateResponse {
+  cards: Card[];
+  rateLimitRemaining?: number;
+}

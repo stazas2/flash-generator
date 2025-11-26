@@ -5,9 +5,11 @@ import { FormEvent, useState } from 'react';
 interface GenerateFormProps {
   onGenerate?: (text: string, count: number) => void;
   isGenerating?: boolean;
+  errorMessage?: string | null;
+  rateLimitRemaining?: number | null;
 }
 
-export default function GenerateForm({ onGenerate, isGenerating }: GenerateFormProps) {
+export default function GenerateForm({ onGenerate, isGenerating, errorMessage, rateLimitRemaining }: GenerateFormProps) {
   const [text, setText] = useState('');
   const [count, setCount] = useState(20);
 
@@ -59,6 +61,9 @@ export default function GenerateForm({ onGenerate, isGenerating }: GenerateFormP
           onChange={(event) => setCount(Number(event.target.value))}
         />
         <p className="text-xs text-slate-500">Пока что лимит — 10-50 карточек за одну генерацию.</p>
+        {typeof rateLimitRemaining === 'number' && (
+          <p className="mt-1 text-xs text-slate-600">Сегодня осталось генераций: {rateLimitRemaining}</p>
+        )}
       </div>
 
       <div className="mt-6 flex gap-3">
@@ -80,6 +85,7 @@ export default function GenerateForm({ onGenerate, isGenerating }: GenerateFormP
           Сбросить
         </button>
       </div>
+      {errorMessage && <p className="mt-3 text-sm text-rose-600">{errorMessage}</p>}
     </form>
   );
 }
