@@ -8,6 +8,7 @@ import FeedbackForm from '@/components/FeedbackForm';
 import GenerateForm from '@/components/GenerateForm';
 import { mockDecks } from '@/data/mockDecks';
 import { Card, Deck } from '@/types';
+import { analytics } from '@/utils/analytics';
 import { requestDeckGeneration } from '@/utils/api';
 import { loadDecks, saveDeck } from '@/utils/storage';
 
@@ -59,9 +60,24 @@ export default function HomePage() {
       };
 
       syncDeck(newDeck);
+      analytics.track({
+        event: 'generate_success',
+        timestamp: Date.now(),
+        props: {
+          deckId: newDeck.id,
+          cards: cardsFromApi.length,
+          rateLimitRemaining: remaining,
+          textLength: text.length,
+        },
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Не удалось сгенерировать карточки.';
       setGenerationError(message);
+      analytics.track({
+        event: 'generate_error',
+        timestamp: Date.now(),
+        props: { message },
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -76,6 +92,11 @@ export default function HomePage() {
     };
 
     syncDeck(newDeck);
+    analytics.track({
+      event: 'deck_created',
+      timestamp: Date.now(),
+      props: { deckId: newDeck.id },
+    });
   };
 
   const handleUpdateCard = (id: string, field: keyof Card, value: string) => {

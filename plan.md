@@ -1285,7 +1285,7 @@ npx lint-staged
 - [ ] Создать репозиторий `flash-generator` на GitHub
 - [ ] Зарегистрировать OpenAI API key ([platform.openai.com](https://platform.openai.com))
 - [ ] (Опционально) Зарегистрировать Anthropic API key для Claude fallback
-- [ ] Создать `.env.example`:
+- [x] Создать `.env.example`:
   ```
   OPENAI_API_KEY=sk-...
   ANTHROPIC_API_KEY=sk-ant-... # optional
@@ -1301,13 +1301,13 @@ npx lint-staged
 ### Неделя 1 (дни 1-7)
 - [x] День 1-2: Каркас UI + роутинг
 - [x] День 3-4: Mock-генерация (end-to-end без AI)
-- [ ] День 5-7: OpenAI интеграция + итерация промпта (3 дня на это!)
+- [x] День 5-7: OpenAI интеграция + итерация промпта (3 дня на это!)
 
 ### Неделя 2 (дни 8-14)
-- [ ] День 8-9: Cards Editor
-- [ ] День 10-11: Study Mode
-- [ ] День 12-13: localStorage + Export/Import
-- [ ] День 14: Rate limiting + аналитика
+- [x] День 8-9: Cards Editor
+- [x] День 10-11: Study Mode
+- [x] День 12-13: localStorage + Export/Import
+- [x] День 14: Rate limiting + аналитика
 
 ### Неделя 3 (дни 15-21)
 - [ ] День 15-16: UX-полировка (loader, ошибки, стили)

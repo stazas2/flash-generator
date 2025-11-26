@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/types';
+import { analytics } from '@/utils/analytics';
 
 interface StudyViewProps {
   cards: Card[];
@@ -33,7 +34,33 @@ export default function StudyView({ cards, deckName }: StudyViewProps) {
     setCurrentIndex(0);
     setShowAnswer(false);
     setResults([]);
+    analytics.track({
+      event: 'study_restart',
+      timestamp: Date.now(),
+      props: { deckName, total: cards.length },
+    });
   };
+
+  useEffect(() => {
+    analytics.track({
+      event: 'study_start',
+      timestamp: Date.now(),
+      props: { deckName, total: cards.length },
+    });
+  }, [deckName, cards.length]);
+
+  useEffect(() => {
+    if (!isComplete || results.length === 0) {
+      return;
+    }
+
+    const correct = results.filter(Boolean).length;
+    analytics.track({
+      event: 'study_complete',
+      timestamp: Date.now(),
+      props: { deckName, total: cards.length, correct, accuracy: correct / results.length },
+    });
+  }, [isComplete, results, deckName, cards.length]);
 
   if (cards.length === 0) {
     return <p className="rounded-lg bg-slate-50 p-4 text-center text-slate-500">Нет карточек для изучения.</p>;
