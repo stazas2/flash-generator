@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import CardsEditor from '@/components/CardsEditor';
 import DeckList from '@/components/DeckList';
 import ExportImport from '@/components/ExportImport';
@@ -60,6 +61,7 @@ export default function HomePage() {
       };
 
       syncDeck(newDeck);
+      toast.success(`Колода создана! Сгенерировано ${cardsFromApi.length} карточек`);
       analytics.track({
         event: 'generate_success',
         timestamp: Date.now(),
@@ -73,6 +75,7 @@ export default function HomePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Не удалось сгенерировать карточки.';
       setGenerationError(message);
+      toast.error(message);
       analytics.track({
         event: 'generate_error',
         timestamp: Date.now(),
@@ -92,6 +95,7 @@ export default function HomePage() {
     };
 
     syncDeck(newDeck);
+    toast.success('Новая колода создана!');
     analytics.track({
       event: 'deck_created',
       timestamp: Date.now(),
@@ -123,6 +127,7 @@ export default function HomePage() {
     };
 
     syncDeck(updatedDeck);
+    toast.success('Карточка удалена');
   };
 
   const handleAddCard = () => {
@@ -142,6 +147,7 @@ export default function HomePage() {
     };
 
     syncDeck(updatedDeck);
+    toast.success('Карточка добавлена!');
   };
 
   const handleImport = () => {
@@ -149,6 +155,7 @@ export default function HomePage() {
     setDecks(storedDecks.length > 0 ? storedDecks : mockDecks);
     const active = storedDecks.find((deck) => deck.id === selectedDeck?.id);
     setSelectedDeck(active ?? storedDecks[0] ?? mockDecks[0] ?? null);
+    toast.success('Импорт завершён!');
   };
 
   return (

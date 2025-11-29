@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { Sparkles, RotateCcw, FileText, Sliders } from 'lucide-react';
+import { FormEvent, useState, useMemo } from 'react';
+import { Sparkles, RotateCcw, FileText, Sliders, AlertCircle, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface GenerateFormProps {
   onGenerate?: (text: string, count: number) => void;
@@ -10,13 +11,34 @@ interface GenerateFormProps {
   rateLimitRemaining?: number | null;
 }
 
+const MIN_CHARS = 100;
+const MAX_CHARS = 10000;
+
 export default function GenerateForm({ onGenerate, isGenerating, errorMessage, rateLimitRemaining }: GenerateFormProps) {
   const [text, setText] = useState('');
   const [count, setCount] = useState(20);
 
+  const charCount = text.length;
+  const isValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
+  const isTooShort = charCount > 0 && charCount < MIN_CHARS;
+  const isTooLong = charCount > MAX_CHARS;
+
+  const validationMessage = useMemo(() => {
+    if (isTooShort) return `Слишком мало текста (минимум ${MIN_CHARS} символов)`;
+    if (isTooLong) return `Превышен лимит (максимум ${MAX_CHARS} символов)`;
+    return null;
+  }, [isTooShort, isTooLong]);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!text.trim()) {
+      toast.error('Введите текст для генерации');
+      return;
+    }
+
+    if (!isValid) {
+      toast.error(validationMessage || 'Некорректная длина текста');
       return;
     }
 
@@ -50,18 +72,46 @@ export default function GenerateForm({ onGenerate, isGenerating, errorMessage, r
 
         <div className="space-y-5">
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700" htmlFor="deck-text">
-              <FileText className="h-4 w-4 text-indigo-500" />
-              Исходный текст
-            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700" htmlFor="deck-text">
+                <FileText className="h-4 w-4 text-indigo-500" />
+                Исходный текст
+              </label>
+              <span
+                className={`text-xs font-semibold transition-colors ${
+                  isTooLong
+                    ? 'text-rose-600'
+                    : isTooShort
+                      ? 'text-amber-600'
+                      : charCount >= MIN_CHARS
+                        ? 'text-emerald-600'
+                        : 'text-slate-400'
+                }`}
+              >
+                {charCount} / {MAX_CHARS}
+              </span>
+            </div>
             <textarea
               id="deck-text"
               name="deck-text"
-              className="mt-2 h-44 w-full resize-none rounded-xl border-2 border-slate-200 bg-slate-50/50 p-4 text-sm backdrop-blur-sm transition-all placeholder:text-slate-400 hover:border-indigo-200 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
+              className={`mt-1 h-44 w-full resize-none rounded-xl border-2 bg-slate-50/50 p-4 text-sm backdrop-blur-sm transition-all placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4 ${
+                isTooLong
+                  ? 'border-rose-300 hover:border-rose-400 focus:border-rose-500 focus:ring-rose-100'
+                  : isTooShort
+                    ? 'border-amber-300 hover:border-amber-400 focus:border-amber-500 focus:ring-amber-100'
+                    : 'border-slate-200 hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-100'
+              }`}
               placeholder="Вставь сюда 1-2 абзаца учебника или конспекта..."
               value={text}
               onChange={(event) => setText(event.target.value)}
+              maxLength={MAX_CHARS + 100}
             />
+            {validationMessage && (
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <AlertCircle className={`h-3.5 w-3.5 ${isTooLong ? 'text-rose-500' : 'text-amber-500'}`} />
+                <span className={isTooLong ? 'text-rose-600' : 'text-amber-600'}>{validationMessage}</span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -96,12 +146,21 @@ export default function GenerateForm({ onGenerate, isGenerating, errorMessage, r
         <div className="mt-7 flex gap-3">
           <button
             type="submit"
-            disabled={isGenerating || !text.trim()}
+            disabled={isGenerating || !isValid || !text.trim()}
             className="group/btn relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
-              <Sparkles className={`h-4 w-4 ${isGenerating ? 'animate-spin' : 'group-hover/btn:rotate-12'} transition-transform`} />
-              {isGenerating ? 'Генерируем...' : 'Generate'}
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Генерируем... (~10 сек)
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 transition-transform group-hover/btn:rotate-12" />
+                  Generate
+                </>
+              )}
             </span>
             <div className="absolute inset-0 -z-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 transition-opacity group-hover/btn:opacity-100" />
           </button>

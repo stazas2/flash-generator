@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { Deck } from '@/types';
 import { loadDecks, persistDecks } from '@/utils/storage';
 import { Download, Upload, Database, FileJson } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function ExportImport({ onImportComplete }: ExportImportProps) {
     anchor.download = `flashcards-backup-${Date.now()}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    toast.success('Файл экспортирован!');
   };
 
   const handleImportClick = () => {
@@ -41,12 +43,12 @@ export default function ExportImport({ onImportComplete }: ExportImportProps) {
         if (Array.isArray(imported)) {
           persistDecks(imported);
           onImportComplete?.(imported as Deck[]);
-          alert('Импорт завершён!');
+          toast.success('Импорт завершён!');
         } else {
-          alert('Файл не похож на бэкап колод.');
+          toast.error('Файл не похож на бэкап колод.');
         }
       } catch (error) {
-        alert('Не удалось прочитать файл.');
+        toast.error('Не удалось прочитать файл.');
         console.error(error);
       }
     };
