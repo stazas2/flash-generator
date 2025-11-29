@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { Card } from '@/types';
 
@@ -13,6 +14,9 @@ const openai =
   process.env.OPENAI_API_KEY != null
     ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
     : null;
+const gemini =
+  process.env.GEMINI_API_KEY != null ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+const geminiModelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 class ValidationError extends Error {}
 
@@ -49,6 +53,27 @@ const checkRateLimit = (
 
   record.count += 1;
   return { allowed: true, remaining: limit - record.count, resetAt: record.resetAt };
+};
+
+const buildMockCardsFromText = (text: string, count: number): Card[] => {
+  const sentences = text
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+
+  if (!sentences.length) {
+    return Array.from({ length: count }).map((_, index) => ({
+      id: generateId(),
+      question: `Какой ключевой факт №${index + 1}?`,
+      answer: 'Недостаточно текста для генерации — добавьте больше материала.',
+    }));
+  }
+
+  return sentences.slice(0, count).map((sentence) => ({
+    id: generateId(),
+    question: `Что важно знать про: "${sentence.slice(0, 60)}${sentence.length > 60 ? '…' : ''}"?`,
+    answer: sentence,
+  }));
 };
 
 const validateGenerateRequest = (rawText: unknown, rawCount: unknown) => {
@@ -93,11 +118,18 @@ ${text.slice(0, MAX_PROMPT_LENGTH)}
   ]
 }`;
 
+const extractJson = (raw: string) => {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/```json([\s\S]*?)```/i);
+  const content = fenced ? fenced[1] : trimmed.replace(/```/g, '');
+  return JSON.parse(content);
+};
+
 const extractCards = (raw: string, count: number): Card[] => {
   let parsed: { cards?: { question?: string; answer?: string }[] };
 
   try {
-    parsed = JSON.parse(raw);
+    parsed = extractJson(raw);
   } catch {
     throw new Error('Не удалось разобрать ответ модели.');
   }
@@ -146,6 +178,23 @@ const generateWithOpenAI = async (text: string, count: number): Promise<Card[]> 
   return extractCards(content, count);
 };
 
+const generateWithGemini = async (text: string, count: number): Promise<Card[]> => {
+  if (!gemini) {
+    throw new Error('Gemini API key не настроен на сервере.');
+  }
+
+  const model = gemini.getGenerativeModel({ model: geminiModelName });
+  const prompt = buildPrompt(text, count);
+  const result = await model.generateContent([{ role: 'user', parts: [{ text: prompt }] }]);
+  const content = result.response.text();
+
+  if (!content) {
+    throw new Error('Пустой ответ от Gemini. Попробуйте ещё раз.');
+  }
+
+  return extractCards(content, count);
+};
+
 const mapErrorToStatus = (error: unknown) => {
   if (error instanceof ValidationError) {
     return { status: 400, message: error.message };
@@ -186,8 +235,26 @@ export async function POST(request: Request) {
       );
     }
 
-    const cards = await generateWithOpenAI(sanitizedText, normalizedCount);
-    return NextResponse.json({ cards, rateLimitRemaining: remaining });
+    let source: 'openai' | 'gemini' | 'mock' = 'openai';
+    let warning: string | undefined;
+    let cards: Card[] = [];
+
+    try {
+      cards = await generateWithOpenAI(sanitizedText, normalizedCount);
+    } catch (openAiError) {
+      console.error('[api/generate] OpenAI failed, trying Gemini', openAiError);
+      source = 'gemini';
+      try {
+        cards = await generateWithGemini(sanitizedText, normalizedCount);
+      } catch (geminiError) {
+        console.error('[api/generate] Gemini failed, falling back to mock', geminiError);
+        source = 'mock';
+        warning = 'AI недоступен, сгенерированы карточки по тексту без AI.';
+        cards = buildMockCardsFromText(sanitizedText, normalizedCount);
+      }
+    }
+
+    return NextResponse.json({ cards, rateLimitRemaining: remaining, source, warning });
   } catch (error) {
     if (!(error instanceof ValidationError)) {
       console.error('[api/generate] AI generation failed', error);

@@ -22,9 +22,11 @@ export async function requestDeckGeneration(payload: GenerateRequest): Promise<G
     throw new Error(errorMessage);
   }
 
-  const data = (await response.json()) as { cards?: Card[]; rateLimitRemaining?: number };
+  const data = (await response.json()) as { cards?: Card[]; rateLimitRemaining?: number; source?: string; warning?: string };
   return {
     cards: data.cards ?? [],
     rateLimitRemaining: data.rateLimitRemaining,
+    source: data.source as GenerateResponse['source'],
+    warning: data.warning,
   };
 }

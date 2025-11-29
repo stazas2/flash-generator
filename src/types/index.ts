@@ -26,4 +26,6 @@ export interface GenerateRequest {
 export interface GenerateResponse {
   cards: Card[];
   rateLimitRemaining?: number;
+  source?: 'openai' | 'gemini' | 'mock';
+  warning?: string;
 }
