@@ -16,7 +16,7 @@ const openai =
     : null;
 const gemini =
   process.env.GEMINI_API_KEY != null ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-const geminiModelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const geminiModelName = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
 
 class ValidationError extends Error {}
 
@@ -32,6 +32,22 @@ const sanitizeText = (text: string) => text.replace(/"""/g, '"').trim();
 
 type RateLimitRecord = { count: number; resetAt: number };
 const rateLimits = new Map<string, RateLimitRecord>();
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
 
 const checkRateLimit = (
   identifier: string,
@@ -185,7 +201,7 @@ const generateWithGemini = async (text: string, count: number): Promise<Card[]> 
 
   const model = gemini.getGenerativeModel({ model: geminiModelName });
   const prompt = buildPrompt(text, count);
-  const result = await model.generateContent([{ role: 'user', parts: [{ text: prompt }] }]);
+  const result = await model.generateContent(prompt);
   const content = result.response.text();
 
   if (!content) {
@@ -235,29 +251,30 @@ export async function POST(request: Request) {
       );
     }
 
-    let source: 'openai' | 'gemini' | 'mock' = 'openai';
+    let source: 'openai' | 'gemini' | 'mock' = 'gemini';
     let warning: string | undefined;
     let cards: Card[] = [];
 
     try {
-      cards = await generateWithOpenAI(sanitizedText, normalizedCount);
-    } catch (openAiError) {
-      console.error('[api/generate] OpenAI failed, trying Gemini', openAiError);
-      source = 'gemini';
+      cards = await generateWithGemini(sanitizedText, normalizedCount);
+    } catch (geminiError) {
+      console.error(`[api/generate] Gemini failed, trying OpenAI: ${getErrorMessage(geminiError)}`, geminiError);
+      source = 'openai';
       try {
-        cards = await generateWithGemini(sanitizedText, normalizedCount);
-      } catch (geminiError) {
-        console.error('[api/generate] Gemini failed, falling back to mock', geminiError);
+        cards = await generateWithOpenAI(sanitizedText, normalizedCount);
+      } catch (openAiError) {
+        console.error(`[api/generate] OpenAI failed, falling back to mock: ${getErrorMessage(openAiError)}`, openAiError);
         source = 'mock';
         warning = 'AI недоступен, сгенерированы карточки по тексту без AI.';
         cards = buildMockCardsFromText(sanitizedText, normalizedCount);
       }
     }
 
+    console.log(`[api/generate] Source used: ${source}${warning ? ` (warning: ${warning})` : ''}`);
     return NextResponse.json({ cards, rateLimitRemaining: remaining, source, warning });
   } catch (error) {
     if (!(error instanceof ValidationError)) {
-      console.error('[api/generate] AI generation failed', error);
+      console.error(`[api/generate] AI generation failed: ${getErrorMessage(error)}`, error);
     }
 
     const { status, message } = mapErrorToStatus(error);
